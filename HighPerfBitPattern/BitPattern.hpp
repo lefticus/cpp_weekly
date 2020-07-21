@@ -1,7 +1,11 @@
+#ifndef CPP_WEEKLY_BITPATTERN_HPP
+#define CPP_WEEKLY_BITPATTERN_HPP
+
 #include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 
+namespace CppWeekly {
 class BitPattern {
  private:
   // expected is the expected result after masking
@@ -46,3 +50,6 @@ class BitPattern {
     return (value & pattern.mask) == pattern.expected;
   }
 };
+}
+
+#endif
