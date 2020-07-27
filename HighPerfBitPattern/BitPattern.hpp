@@ -19,7 +19,9 @@ class BitPattern {
  public:
   template <std::size_t Size>
   explicit consteval BitPattern(const char (&input)[Size]) {
-    std::uint64_t cur_bit = (1 << (Size - 2));
+    std::uint64_t cur_bit = 1;
+    cur_bit <<= (Size - 2);
+   
     for (const char val : input) {
       if (val == 0) {
         return;
