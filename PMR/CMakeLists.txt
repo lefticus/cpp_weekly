@@ -1,0 +1,4 @@
+add_executable(pmr_performance_tests performance_tests.cpp)
+target_link_libraries(pmr_performance_tests PRIVATE CONAN_PKG::benchmark project_options project_warnings)
+
+
