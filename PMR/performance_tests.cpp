@@ -552,7 +552,49 @@ BENCHMARK_TEMPLATE(MultiThreaded, 10, PoolMonotonic<10>);
 
 
 
+template<typename Allocator>
+static void CreateAndAccess(benchmark::State &state)
+{
+  auto worker = []() {
+    Allocator alloc;
+    std::pmr::list<int> values(alloc.get_resource());
+    for (int i = 0; i < 1000; ++i) {
+      values.push_back(i);
+    }
 
+    for (int i = 0; i < 10000; ++i) {
+      for (auto &value : values) {
+        ++value;
+      }
+      values.erase(values.begin());
+      values.push_back(0);
+    }
+
+    return values.back();
+//    result = std::accumulate(begin(values), end(values), 0);
+  };
+
+  for (auto _ : state) {
+    const auto value = worker();
+    benchmark::DoNotOptimize(value);
+  }
+}
+
+BENCHMARK_TEMPLATE(CreateAndAccess, NewDelete)->Threads(1);
+BENCHMARK_TEMPLATE(CreateAndAccess, Monotonic<10>)->Threads(1);
+BENCHMARK_TEMPLATE(CreateAndAccess, PoolMonotonic<10>)->Threads(1);
+BENCHMARK_TEMPLATE(CreateAndAccess, NewDelete)->Threads(3);
+BENCHMARK_TEMPLATE(CreateAndAccess, Monotonic<10>)->Threads(3);
+BENCHMARK_TEMPLATE(CreateAndAccess, PoolMonotonic<10>)->Threads(3);
+BENCHMARK_TEMPLATE(CreateAndAccess, NewDelete)->Threads(5);
+BENCHMARK_TEMPLATE(CreateAndAccess, Monotonic<10>)->Threads(5);
+BENCHMARK_TEMPLATE(CreateAndAccess, PoolMonotonic<10>)->Threads(5);
+BENCHMARK_TEMPLATE(CreateAndAccess, NewDelete)->Threads(7);
+BENCHMARK_TEMPLATE(CreateAndAccess, Monotonic<10>)->Threads(7);
+BENCHMARK_TEMPLATE(CreateAndAccess, PoolMonotonic<10>)->Threads(7);
+BENCHMARK_TEMPLATE(CreateAndAccess, NewDelete)->Threads(10);
+BENCHMARK_TEMPLATE(CreateAndAccess, Monotonic<10>)->Threads(10);
+BENCHMARK_TEMPLATE(CreateAndAccess, PoolMonotonic<10>)->Threads(10);
 
 
 
