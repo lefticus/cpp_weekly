@@ -260,7 +260,7 @@ static void RapidJSON_PMR_Monotonic_Winkout_Parse(benchmark::State &state, std::
 }
 
 
-static void RapidJSON_Monotonic_Winkout_Parse(benchmark::State &state, std::string_view s)
+static void RapidJSON_Monotonic_Parse(benchmark::State &state, std::string_view s)
 {
   for (auto _ : state) {
     using namespace rapidjson;
@@ -312,7 +312,7 @@ ADD_BENCHMARK(RapidJSON_PMR_Parse, "citm_catalog.json");
 ADD_BENCHMARK(RapidJSON_PMR_Monotonic_Parse, "citm_catalog.json");
 ADD_BENCHMARK(RapidJSON_PMR_Pool_Monotonic_Parse, "citm_catalog.json");
 ADD_BENCHMARK(RapidJSON_PMR_Monotonic_Winkout_Parse, "citm_catalog.json");
-ADD_BENCHMARK(RapidJSON_Monotonic_Winkout_Parse, "citm_catalog.json");
+ADD_BENCHMARK(RapidJSON_Monotonic_Parse, "citm_catalog.json");
 ADD_BENCHMARK(nlohmann_JSON_Default, "citm_catalog.json");
 
 ADD_BENCHMARK(Boost_JSON_Default_Parse, "gsoc-2018.json");
@@ -324,7 +324,7 @@ ADD_BENCHMARK(RapidJSON_PMR_Parse, "gsoc-2018.json");
 ADD_BENCHMARK(RapidJSON_PMR_Monotonic_Parse, "gsoc-2018.json");
 ADD_BENCHMARK(RapidJSON_PMR_Pool_Monotonic_Parse, "gsoc-2018.json");
 ADD_BENCHMARK(RapidJSON_PMR_Monotonic_Winkout_Parse, "gsoc-2018.json");
-ADD_BENCHMARK(RapidJSON_Monotonic_Winkout_Parse, "gsoc-2018.json");
+ADD_BENCHMARK(RapidJSON_Monotonic_Parse, "gsoc-2018.json");
 ADD_BENCHMARK(nlohmann_JSON_Default, "gsoc-2018.json");
 
 ADD_BENCHMARK(Boost_JSON_Default_Parse, "github_events.json");
@@ -336,7 +336,7 @@ ADD_BENCHMARK(RapidJSON_PMR_Parse, "github_events.json");
 ADD_BENCHMARK(RapidJSON_PMR_Monotonic_Parse, "github_events.json");
 ADD_BENCHMARK(RapidJSON_PMR_Pool_Monotonic_Parse, "github_events.json");
 ADD_BENCHMARK(RapidJSON_PMR_Monotonic_Winkout_Parse, "github_events.json");
-ADD_BENCHMARK(RapidJSON_Monotonic_Winkout_Parse, "github_events.json");
+ADD_BENCHMARK(RapidJSON_Monotonic_Parse, "github_events.json");
 ADD_BENCHMARK(nlohmann_JSON_Default, "github_events.json");
 
 
