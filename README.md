@@ -21,3 +21,7 @@ Repositories related to C++ Weekly
    - Probably gruvbox
  * What are your NeoVIM settings?
    - https://github.com/lefticus/nvim-config
+ * What font do you use?
+   - Monospaced - Source Code Pro
+   - Variable Width - Source Sans Pro
+   - Both available on github: https://github.com/adobe-fonts
