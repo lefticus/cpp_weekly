@@ -9,6 +9,7 @@ class Point:
     def __add__(self, other):
         return Point(self.x + other.x, self.y + other.y)
 
+# Important note: codon does *not* use floor modulos, like Python does!
 def modulo(dividend, divisor):
     return ((dividend % divisor) + divisor) % divisor
 
