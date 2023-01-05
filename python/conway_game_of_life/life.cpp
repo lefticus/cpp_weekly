@@ -5,10 +5,13 @@
 #include <vector>
 #include <fmt/format.h>
 
+// necessary to keep the same algorithm as Python
 constexpr auto floor_modulo(auto dividend, auto divisor) {
     return ((dividend % divisor) + divisor) % divisor;
 }
 
+// if we wanted to push this further, we would make the width and height compile-time constants
+// that is for a future episode.
 struct Automata {
     using index_t = std::make_signed_t<std::size_t>;
 
