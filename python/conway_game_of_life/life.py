@@ -15,10 +15,10 @@ class Automata:
         self.survives = survives
         self.data = [False] * (width * height)
 
-    def index(self, p : Point):
+    def index(self, p: Point):
         return (p.y % self.height) * self.width + (p.x % self.width)
 
-    def get(self, p : Point):
+    def get(self, p: Point):
         return self.data[self.index(p)]
 
     def set(self, p: Point):
