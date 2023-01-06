@@ -2,6 +2,11 @@
 
 #define DUMP_MACRO(x) std::cout << #x " " << x << '\n'
 
+template<typename T, std::size_t N>
+struct MyData {
+  T data[N];
+};
+
 void go() {
   std::cout << "Hello World\n";
 
