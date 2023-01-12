@@ -22,6 +22,18 @@ class Automata:
     survives: tuple[bool, bool, bool, bool, bool, bool, bool, bool, bool]
     data: list[bool]
 
+    neighbors = (
+        Point(-1, -1),
+        Point(0, -1),
+        Point(1, -1),
+        Point(-1, 0),
+        Point(1, 0),
+        Point(-1, 1),
+        Point(0, 1),
+        Point(1, 1),
+    )
+
+
     def __init__(self, width, height, born, survives):
         self.width = width
         self.height = height
@@ -39,18 +51,7 @@ class Automata:
         self.data[self.index(p)] = True
 
     def count_neighbors(self, p: Point):
-        neighbors = (
-            Point(-1, -1),
-            Point(0, -1),
-            Point(1, -1),
-            Point(-1, 0),
-            Point(1, 0),
-            Point(-1, 1),
-            Point(0, 1),
-            Point(1, 1),
-        )
-
-        return sum(1 for loc in neighbors if self.get(loc + p))
+        return sum(1 for loc in self.neighbors if self.get(loc + p))
 
     def next(self):
         result = Automata(self.width, self.height, self.born, self.survives)
@@ -85,7 +86,7 @@ obj = Automata(
 
 obj.add_glider(Point(0, 18))
 
-for i in range(0, 1000):
+for i in range(0, 10000):
     obj = obj.next()
 
 for y in range(0, obj.height):
