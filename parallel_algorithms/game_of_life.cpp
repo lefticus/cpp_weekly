@@ -123,7 +123,7 @@ template <std::size_t Width, std::size_t Height> struct GameBoard {
       Point{-1, -1}, Point{0, -1}, Point{1, -1}, Point{-1, 0},
       Point{1, 0},   Point{-1, 1}, Point{0, 1},  Point{1, 1}};
 
-  // Takes the input point, wraps it veritcally/horizontally and takes
+  // Takes the input point, wraps it vertically/horizontally and takes
   // the new location and maps that to the linear address of the point
   // in the underlying array
   [[nodiscard]] constexpr static std::size_t index(Point p) {
