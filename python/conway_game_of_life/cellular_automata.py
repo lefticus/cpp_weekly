@@ -14,6 +14,7 @@ class Point:
 class Cell:
     rule_number: int
     value: int
+    velocity: Point
 
 class Neighborhood:
     def __init__(self, array, array_width, array_height, center):
@@ -32,7 +33,7 @@ class Automata:
     def __init__(self, width, height, rules):
         self.width = width
         self.height = height
-        self.data = [Cell(0, 0)] * (width * height)
+        self.data = [Cell(0, 0, Point(0,0))] * (width * height)
         self.rules = rules
 
     def index(self, p: Point):
@@ -61,7 +62,7 @@ class Automata:
         return result
 
     def randomize_values(self, value_min, value_max):
-        self.data = [Cell(c.rule_number, random.randint(value_min, value_max)) for c in self.data]
+        self.data = [Cell(c.rule_number, random.randint(value_min, value_max), Point(0,0)) for c in self.data]
 
 
 
@@ -75,13 +76,47 @@ def gravity(cell : Cell, neighbors : Neighborhood):
 
     return cell
 
+def towards_me(p: Point, v :Point):
+    if p.x < 0 and p.y < 0 and v.x >0 and v.y>0:
+        return True
+    if p.x == 0 and p.y < 0 and v.x == 0 and v.y >0:
+        return True
+    if p.x > 0 and p.y < 0 and v.x < 0 and v.y > 0:
+        return True
+    if p.x < 0 and p.y == 0 and v.x > 0 and v.y == 0:
+        return True
+    if p.x > 0 and p.y == 0 and v.x < 0 and v.y == 0:
+        return True
+    if p.x < 0 and p.y > 0 and v.x > 0 and v.y < 0:
+        return True
+    if p.x == 0 and p.y > 0 and v.x == 0 and v.y < 0:
+        return True
+    if p.x > 0 and p.y > 0 and v.x < 0 and v.y < 0:
+        return True
+
+    return False
+
+
 def fire(cell : Cell, neighbors : Neighborhood):
     falloff = .99
-    new_value = int(cell.value * (random.random()*falloff)) + int(neighbors.get(Point(0, 1)).value * (random.random()*falloff))
+    new_value = int(cell.value * (random.random()*falloff))
+    new_velocity = cell.velocity
+
+    for x in [-1,0,1]:
+        for y in [-1,0,1]:
+            if not (x == 0 and y == 0):
+                point = Point(x,y)
+                neighbor = neighbors.get(point)
+
+                if towards_me(point, neighbor.velocity):
+                    new_value += int(neighbor.value * (random.random()*falloff))
+                    #new_velocity += neighbor.velocity
+                    new_velocity += Point((neighbor.velocity.x * (random.random()*falloff)), (neighbor.velocity.y * (random.random()*falloff)))
+
 
     new_value = new_value if new_value <= 255 else 255
 
-    return Cell(cell.rule_number, new_value)
+    return Cell(cell.rule_number, new_value, new_velocity)
 
 
 width = 320
@@ -95,14 +130,18 @@ obj = Automata(
 
 obj.randomize_values(0, 255)
 
+#Top and bottom borders
 for x in range(0, obj.width):
-    obj.set(Point(x, 0), Cell(0, 0))
-    obj.set(Point(x, obj.height-1), Cell(0, 255))
+    obj.set(Point(x, 0), Cell(0, 0, Point(0,0)))
+    obj.set(Point(x, obj.height-1), Cell(0, 255, Point(10,-10)))
 
+# Left and right borders
 for y in range(0, obj.height):
-    obj.set(Point(0, y), Cell(0, 0))
-    obj.set(Point(obj.width-1, y), Cell(0, 0))
+    obj.set(Point(0, y), Cell(0, 0, Point(0,0)))
+    obj.set(Point(obj.width-1, y), Cell(0, 0, Point(0,0)))
 
+for y in range(obj.height-300, obj.height):
+    obj.set(Point(obj.width-1, y), Cell(0, 0, Point(-10, 0)))
 
 pygame.init()
 screen = pygame.display.set_mode((width, height))

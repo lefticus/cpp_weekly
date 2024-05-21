@@ -199,14 +199,18 @@ constexpr void iterate_board(const BoardType &input, BoardType &output,
     return true;
   };
 
+#ifndef SERIAL
   if consteval {
+#endif
     std::transform(indices.begin(), indices.end(), output.data.begin(), rules);
+#ifndef SERIAL
   } else {
     // std::execution::par_unseq to tell the runtime that it can parallelize
     // this
     std::transform(std::execution::par_unseq, indices.begin(), indices.end(),
                    output.data.begin(), rules);
   }
+#endif
 }
 
 struct Timer {
