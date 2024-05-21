@@ -95,15 +95,15 @@ static void Boost_JSON_PMR_Monotonic_Winkout_Parse(benchmark::State &state, std:
 }
 
 //  Your homework: get this compiling and working so that PMR permeates the json parser when desired
-//  static void nlohmann_JSON_PMR(benchmark::State &state)
-//  {
-//    using pmr_json = nlohmann::basic_json<std::map, std::vector, std::pmr::string, bool, std::int64_t, std::uint64_t, double, std::pmr::polymorphic_allocator>;
-//    auto s = load_file("citm_catalog.json");
-//    for (auto _ : state) {
-//        auto jv = pmr_json::parse(s.begin(), s.end());
-//    }
-//  }
-//  BENCHMARK(nlohmann_JSON_PMR);
+  static void nlohmann_JSON_PMR(benchmark::State &state)
+  {
+    using pmr_json = nlohmann::basic_json<std::map, std::vector, std::pmr::string, bool, std::int64_t, std::uint64_t, double, std::pmr::polymorphic_allocator>;
+    auto s = load_file("citm_catalog.json");
+    for (auto _ : state) {
+        auto jv = pmr_json::parse(s.begin(), s.end());
+    }
+  }
+  BENCHMARK(nlohmann_JSON_PMR);
 
 static void Boost_JSON_PMR_Monotonic_Parse(benchmark::State &state, std::string_view s)
 {

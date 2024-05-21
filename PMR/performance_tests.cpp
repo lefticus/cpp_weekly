@@ -558,11 +558,11 @@ static void CreateAndAccess(benchmark::State &state)
   auto worker = []() {
     Allocator alloc;
     std::pmr::list<int> values(alloc.get_resource());
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 100000; ++i) {
       values.push_back(i);
     }
 
-    for (int i = 0; i < 10000; ++i) {
+    for (int i = 0; i < 1000; ++i) {
       for (auto &value : values) {
         ++value;
       }
