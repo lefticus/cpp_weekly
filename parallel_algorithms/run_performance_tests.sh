@@ -1,12 +1,12 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <source_file.cpp>"
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 <source_file.cpp> [additional_compiler_flags]"
   exit 1
 fi
 
 # Check if necessary commands are available
-commands=("perf" "strip" "/usr/bin/time")
+commands=("perf" "strip" "/usr/bin/time" "lscpu")
 for cmd in "${commands[@]}"; do
   if ! command -v $cmd &> /dev/null; then
     echo "$cmd could not be found. Please install $cmd and try again."
@@ -15,6 +15,7 @@ for cmd in "${commands[@]}"; do
 done
 
 SOURCE_FILE=$1
+ADDITIONAL_FLAGS="${@:2}"
 OUTPUT_FILE="performance_stats.csv"
 
 # Compiler and optimization flags
@@ -22,20 +23,25 @@ COMPILERS=("gcc" "clang" "clang-13")
 OPT_FLAGS=("-O0" "-O1" "-O2" "-O3" "-Os")
 ARCH_FLAGS=("-march=x86-64" "-march=x86-64-v2" "-march=x86-64-v3" "-march=x86-64-v4")
 
-# CSV header
-echo "Compiler,Version,Optimization,Architecture,File Size (bytes),Stripped Size (bytes),Time1 (ms),Time2 (ms),Time3 (ms),Time4 (ms),Time5 (ms),RAM Usage1 (KB),RAM Usage2 (KB),RAM Usage3 (KB),RAM Usage4 (KB),RAM Usage5 (KB),Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio" > $OUTPUT_FILE
+# Get CPU model information
+CPU_MODEL=$(lscpu | grep "Model name" | awk -F: '{print $2}' | xargs)
+VIRTUALIZATION=$(lscpu | grep "Virtualization" | awk -F: '{print $2}' | xargs)
+VIRT_TYPE=$(lscpu | grep "Hypervisor vendor" | awk -F: '{print $2}' | xargs)
 
-# Function to extract perf metrics
+# CSV header
+echo "Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,File Size (bytes),Stripped Size (bytes),Time1 (ms),Time2 (ms),Time3 (ms),Time4 (ms),Time5 (ms),RAM Usage1 (KB),RAM Usage2 (KB),RAM Usage3 (KB),RAM Usage4 (KB),RAM Usage5 (KB),Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio" > $OUTPUT_FILE
+
+# Function to extract and clean perf metrics
 extract_perf_metrics() {
   local perf_output=$1
-  local cache_references=$(echo "$perf_output" | grep "cache-references" -A 1 | tail -n 1 | awk '{print $1}')
-  local cache_misses=$(echo "$perf_output" | grep "cache-misses" -A 1 | tail -n 1 | awk '{print $1}')
-  local cache_miss_ratio=$(echo "$perf_output" | grep "cache-misses" -A 1 | tail -n 1 | awk '{print $4}')
-  local instructions=$(echo "$perf_output" | grep "instructions" -A 1 | tail -n 1 | awk '{print $1}')
-  local instructions_per_cycle=$(echo "$perf_output" | grep "instructions" -A 1 | tail -n 1 | awk '{print $4}')
-  local branches=$(echo "$perf_output" | grep "branches" -A 1 | tail -n 1 | awk '{print $1}')
-  local branch_misses=$(echo "$perf_output" | grep "branch-misses" -A 1 | tail -n 1 | awk '{print $1}')
-  local branch_miss_ratio=$(echo "$perf_output" | grep "branch-misses" -A 1 | tail -n 1 | awk '{print $4}')
+  local cache_references=$(echo "$perf_output" | grep "cache-references" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
+  local cache_misses=$(echo "$perf_output" | grep "cache-misses" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
+  local cache_miss_ratio=$(echo "$perf_output" | grep "cache-misses" -A 1 | tail -n 1 | awk '{print $4}' | tr -d ',')
+  local instructions=$(echo "$perf_output" | grep "instructions" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
+  local instructions_per_cycle=$(echo "$perf_output" | grep "instructions" -A 1 | tail -n 1 | awk '{print $4}' | tr -d ',')
+  local branches=$(echo "$perf_output" | grep "branches" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
+  local branch_misses=$(echo "$perf_output" | grep "branch-misses" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
+  local branch_miss_ratio=$(echo "$perf_output" | grep "branch-misses" -A 1 | tail -n 1 | awk '{print $4}' | tr -d ',')
   
   echo "$cache_references,$cache_misses,$cache_miss_ratio,$instructions,$instructions_per_cycle,$branches,$branch_misses,$branch_miss_ratio"
 }
@@ -45,12 +51,12 @@ for compiler in "${COMPILERS[@]}"; do
   compiler_version=$($compiler --version | head -n 1)
   for opt in "${OPT_FLAGS[@]}"; do
     for arch in "${ARCH_FLAGS[@]}"; do
-      echo "Compiling with $compiler $opt $arch..."
+      echo "Compiling with $compiler $opt $arch $ADDITIONAL_FLAGS..."
       output_executable="a.out"
-      $compiler $opt $arch $SOURCE_FILE -o $output_executable
+      $compiler $opt $arch $ADDITIONAL_FLAGS $SOURCE_FILE -o $output_executable
 
       if [ $? -ne 0 ]; then
-        echo "Compilation failed for $compiler $opt $arch"
+        echo "Compilation failed for $compiler $opt $arch $ADDITIONAL_FLAGS"
         continue
       fi
 
@@ -76,10 +82,9 @@ for compiler in "${COMPILERS[@]}"; do
       perf_output=$(perf stat -e cache-references,cache-misses,instructions,branches,branch-misses ./$output_executable 2>&1)
       metrics=$(extract_perf_metrics "$perf_output")
 
-      echo "$compiler,$compiler_version,$opt,$arch,$file_size,$stripped_size,${times[0]},${times[1]},${times[2]},${times[3]},${times[4]},${ram_usages[0]},${ram_usages[1]},${ram_usages[2]},${ram_usages[3]},${ram_usages[4]},$metrics" >> $OUTPUT_FILE
+      echo "$compiler,$compiler_version,$opt,$arch,\"$ADDITIONAL_FLAGS\",\"$CPU_MODEL\",\"$VIRTUALIZATION\",\"$VIRT_TYPE\",$file_size,$stripped_size,${times[0]},${times[1]},${times[2]},${times[3]},${times[4]},${ram_usages[0]},${ram_usages[1]},${ram_usages[2]},${ram_usages[3]},${ram_usages[4]},$metrics" >> $OUTPUT_FILE
     done
   done
 done
 
 echo "Performance data collected in $OUTPUT_FILE"
-
