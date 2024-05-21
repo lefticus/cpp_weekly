@@ -17,9 +17,10 @@ done
 SOURCE_FILE=$1
 ADDITIONAL_FLAGS="${@:2}"
 OUTPUT_FILE="performance_stats.csv"
+NUM_RUNS=5
 
 # Compiler and optimization flags
-COMPILERS=("gcc" "clang" "clang-13")
+COMPILERS=("g++" "clang++")
 OPT_FLAGS=("-O0" "-O1" "-O2" "-O3" "-Os")
 ARCH_FLAGS=("-march=x86-64" "-march=x86-64-v2" "-march=x86-64-v3" "-march=x86-64-v4")
 
@@ -29,7 +30,7 @@ VIRTUALIZATION=$(lscpu | grep "Virtualization" | awk -F: '{print $2}' | xargs)
 VIRT_TYPE=$(lscpu | grep "Hypervisor vendor" | awk -F: '{print $2}' | xargs)
 
 # CSV header
-echo "Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,File Size (bytes),Stripped Size (bytes),Time1 (ms),Time2 (ms),Time3 (ms),Time4 (ms),Time5 (ms),RAM Usage1 (KB),RAM Usage2 (KB),RAM Usage3 (KB),RAM Usage4 (KB),RAM Usage5 (KB),Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio" > $OUTPUT_FILE
+echo "Timestamp,Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,File Size (bytes),Stripped Size (bytes),Run,Time (ms),RAM Usage (KB),Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio" > $OUTPUT_FILE
 
 # Function to extract and clean perf metrics
 extract_perf_metrics() {
@@ -64,9 +65,7 @@ for compiler in "${COMPILERS[@]}"; do
       strip "$output_executable"
       stripped_size=$(stat -c%s "$output_executable")
 
-      times=()
-      ram_usages=()
-      for i in {1..5}; do
+      for i in $(seq 1 $NUM_RUNS); do
         echo "Running execution $i..."
         start_time=$(date +%s%N)
         /usr/bin/time -v ./a.out 2> time_output.txt
@@ -75,14 +74,13 @@ for compiler in "${COMPILERS[@]}"; do
         execution_time=$((($end_time - $start_time) / 1000000))  # in milliseconds
         ram_usage=$(grep "Maximum resident set size" time_output.txt | awk '{print $6}')
 
-        times+=($execution_time)
-        ram_usages+=($ram_usage)
+        perf_output=$(perf stat -e cache-references,cache-misses,instructions,branches,branch-misses ./$output_executable 2> perf_output.txt)
+        cat perf_output.txt  # Debugging output
+        metrics=$(extract_perf_metrics "$(cat perf_output.txt)")
+
+        timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+        echo "$timestamp,$compiler,$compiler_version,$opt,$arch,\"$ADDITIONAL_FLAGS\",\"$CPU_MODEL\",\"$VIRTUALIZATION\",\"$VIRT_TYPE\",$file_size,$stripped_size,$i,$execution_time,$ram_usage,$metrics" >> $OUTPUT_FILE
       done
-
-      perf_output=$(perf stat -e cache-references,cache-misses,instructions,branches,branch-misses ./$output_executable 2>&1)
-      metrics=$(extract_perf_metrics "$perf_output")
-
-      echo "$compiler,$compiler_version,$opt,$arch,\"$ADDITIONAL_FLAGS\",\"$CPU_MODEL\",\"$VIRTUALIZATION\",\"$VIRT_TYPE\",$file_size,$stripped_size,${times[0]},${times[1]},${times[2]},${times[3]},${times[4]},${ram_usages[0]},${ram_usages[1]},${ram_usages[2]},${ram_usages[3]},${ram_usages[4]},$metrics" >> $OUTPUT_FILE
     done
   done
 done
