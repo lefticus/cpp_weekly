@@ -6,7 +6,7 @@ if [ $# -lt 1 ]; then
 fi
 
 # Check if necessary commands are available
-commands=("perf" "strip" "/usr/bin/time" "lscpu")
+commands=("perf" "strip" "/usr/bin/time" "lscpu" "sha256sum")
 for cmd in "${commands[@]}"; do
   if ! command -v $cmd &> /dev/null; then
     echo "$cmd could not be found. Please install $cmd and try again."
@@ -28,9 +28,20 @@ ARCH_FLAGS=("-march=x86-64" "-march=x86-64-v2" "-march=x86-64-v3" "-march=x86-64
 CPU_MODEL=$(lscpu | grep "Model name" | awk -F: '{print $2}' | xargs)
 VIRTUALIZATION=$(lscpu | grep "Virtualization" | awk -F: '{print $2}' | xargs)
 VIRT_TYPE=$(lscpu | grep "Hypervisor vendor" | awk -F: '{print $2}' | xargs)
+SHA=$(sha256sum "$SOURCE_FILE" | awk '{print $1}')
 
 # CSV header
-echo "Timestamp,Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,File Size (bytes),Stripped Size (bytes),Run,Time (ms),RAM Usage (KB),Cycles,Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio" > $OUTPUT_FILE
+HEADER="Timestamp,Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,SHA,File Size (bytes),Stripped Size (bytes),Time (ms),RAM Usage (KB),Cycles,Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio"
+
+# Check if the header exists and matches
+if [ -f "$OUTPUT_FILE" ]; then
+  existing_header=$(head -n 1 "$OUTPUT_FILE")
+  if [ "$existing_header" != "$HEADER" ]; then
+    echo "$HEADER" > "$OUTPUT_FILE"
+  fi
+else
+  echo "$HEADER" > "$OUTPUT_FILE"
+fi
 
 # Function to extract and clean perf metrics
 extract_perf_metrics() {
@@ -80,7 +91,7 @@ for compiler in "${COMPILERS[@]}"; do
         metrics=$(extract_perf_metrics "$(cat perf_output.txt)")
 
         timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-        echo "$timestamp,$compiler,$compiler_version,$opt,$arch,\"$ADDITIONAL_FLAGS\",\"$CPU_MODEL\",\"$VIRTUALIZATION\",\"$VIRT_TYPE\",$file_size,$stripped_size,$i,$execution_time,$ram_usage,$metrics" >> $OUTPUT_FILE
+        echo "$timestamp,$compiler,$compiler_version,$opt,$arch,\"$ADDITIONAL_FLAGS\",\"$CPU_MODEL\",\"$VIRTUALIZATION\",\"$VIRT_TYPE\",\"$SHA\",$file_size,$stripped_size,$execution_time,$ram_usage,$metrics" >> "$OUTPUT_FILE"
       done
     done
   done
