@@ -20,9 +20,9 @@ ADDITIONAL_FLAGS="${@:3}"
 OUTPUT_FILE="performance_stats.csv"
 
 # Compiler and optimization flags
-COMPILERS=("g++" "clang++")
-OPT_FLAGS=("-O3" "-O0" "-O1" "-O2" "-Os")
-ARCH_FLAGS=("-march=x86-64" "-march=x86-64-v2" "-march=x86-64-v3" "-march=x86-64-v4")
+COMPILERS=("/usr/lib/llvm16/bin/clang++"  "clang++" "g++")
+OPT_FLAGS=("-O0" "-O1" "-O2" "-O3" "-Os" "-Og")
+ARCH_FLAGS=("" "-march=native")
 CLANG_STDLIBS=("-stdlib=libc++" "-stdlib=libstdc++")
 
 # Get CPU model information
