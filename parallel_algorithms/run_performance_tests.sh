@@ -21,7 +21,7 @@ NUM_RUNS=5
 
 # Compiler and optimization flags
 COMPILERS=("g++" "clang++")
-OPT_FLAGS=("-O0" "-O1" "-O2" "-O3" "-Os")
+OPT_FLAGS=("-O3" "-O0" "-O1" "-O2" "-Os")
 ARCH_FLAGS=("-march=x86-64" "-march=x86-64-v2" "-march=x86-64-v3" "-march=x86-64-v4")
 
 # Get CPU model information
@@ -30,21 +30,22 @@ VIRTUALIZATION=$(lscpu | grep "Virtualization" | awk -F: '{print $2}' | xargs)
 VIRT_TYPE=$(lscpu | grep "Hypervisor vendor" | awk -F: '{print $2}' | xargs)
 
 # CSV header
-echo "Timestamp,Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,File Size (bytes),Stripped Size (bytes),Run,Time (ms),RAM Usage (KB),Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio" > $OUTPUT_FILE
+echo "Timestamp,Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,File Size (bytes),Stripped Size (bytes),Run,Time (ms),RAM Usage (KB),Cycles,Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio" > $OUTPUT_FILE
 
 # Function to extract and clean perf metrics
 extract_perf_metrics() {
   local perf_output=$1
-  local cache_references=$(echo "$perf_output" | grep "cache-references" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
-  local cache_misses=$(echo "$perf_output" | grep "cache-misses" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
-  local cache_miss_ratio=$(echo "$perf_output" | grep "cache-misses" -A 1 | tail -n 1 | awk '{print $4}' | tr -d ',')
-  local instructions=$(echo "$perf_output" | grep "instructions" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
-  local instructions_per_cycle=$(echo "$perf_output" | grep "instructions" -A 1 | tail -n 1 | awk '{print $4}' | tr -d ',')
-  local branches=$(echo "$perf_output" | grep "branches" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
-  local branch_misses=$(echo "$perf_output" | grep "branch-misses" -A 1 | tail -n 1 | awk '{print $1}' | tr -d ',')
-  local branch_miss_ratio=$(echo "$perf_output" | grep "branch-misses" -A 1 | tail -n 1 | awk '{print $4}' | tr -d ',')
+  local cycles=$(echo "$perf_output" | grep "cycles" -A 1 | head -n 1 | awk '{print $1}' | tr -d ',')
+  local cache_references=$(echo "$perf_output" | grep "cache-references" -A 1 | head -n 1 | awk '{print $1}' | tr -d ',')
+  local cache_misses=$(echo "$perf_output" | grep "cache-misses" -A 1 | head -n 1 | awk '{print $1}' | tr -d ',')
+  local cache_miss_ratio=$(echo "$perf_output" | grep "cache-misses" -A 1 | head -n 1 | awk '{print $4}' | tr -d ',')
+  local instructions=$(echo "$perf_output" | grep "instructions" -A 1 | head -n 1 | awk '{print $1}' | tr -d ',')
+  local instructions_per_cycle=$(echo "$perf_output" | grep "instructions" -A 1 | head -n 1 | awk '{print $4}' | tr -d ',')
+  local branches=$(echo "$perf_output" | grep "branches" -A 1 | head -n 1 | awk '{print $1}' | tr -d ',')
+  local branch_misses=$(echo "$perf_output" | grep "branch-misses" -A 1 | head -n 1 | awk '{print $1}' | tr -d ',')
+  local branch_miss_ratio=$(echo "$perf_output" | grep "branch-misses" -A 1 | head -n 1 | awk '{print $4}' | tr -d ',')
   
-  echo "$cache_references,$cache_misses,$cache_miss_ratio,$instructions,$instructions_per_cycle,$branches,$branch_misses,$branch_miss_ratio"
+  echo "$cycles,$cache_references,$cache_misses,$cache_miss_ratio,$instructions,$instructions_per_cycle,$branches,$branch_misses,$branch_miss_ratio"
 }
 
 # Main loop
@@ -74,7 +75,7 @@ for compiler in "${COMPILERS[@]}"; do
         execution_time=$((($end_time - $start_time) / 1000000))  # in milliseconds
         ram_usage=$(grep "Maximum resident set size" time_output.txt | awk '{print $6}')
 
-        perf_output=$(perf stat -e cache-references,cache-misses,instructions,branches,branch-misses ./$output_executable 2> perf_output.txt)
+        perf_output=$(perf stat -e cycles,cache-references,cache-misses,instructions,branches,branch-misses ./$output_executable 2> perf_output.txt)
         cat perf_output.txt  # Debugging output
         metrics=$(extract_perf_metrics "$(cat perf_output.txt)")
 
