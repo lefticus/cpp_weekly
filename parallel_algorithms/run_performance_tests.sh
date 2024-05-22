@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -lt 1 ]; then
-  echo "Usage: $0 <source_file.cpp> [additional_compiler_flags]"
+if [ $# -lt 2 ]; then
+  echo "Usage: $0 <source_file.cpp> <number_of_runs> [additional_compiler_flags]"
   exit 1
 fi
 
@@ -15,14 +15,15 @@ for cmd in "${commands[@]}"; do
 done
 
 SOURCE_FILE=$1
-ADDITIONAL_FLAGS="${@:2}"
+NUM_RUNS=$2
+ADDITIONAL_FLAGS="${@:3}"
 OUTPUT_FILE="performance_stats.csv"
-NUM_RUNS=5
 
 # Compiler and optimization flags
 COMPILERS=("g++" "clang++")
 OPT_FLAGS=("-O3" "-O0" "-O1" "-O2" "-Os")
 ARCH_FLAGS=("-march=x86-64" "-march=x86-64-v2" "-march=x86-64-v3" "-march=x86-64-v4")
+CLANG_STDLIBS=("-stdlib=libc++" "-stdlib=libstdc++")
 
 # Get CPU model information
 CPU_MODEL=$(lscpu | grep "Model name" | awk -F: '{print $2}' | xargs)
@@ -31,7 +32,7 @@ VIRT_TYPE=$(lscpu | grep "Hypervisor vendor" | awk -F: '{print $2}' | xargs)
 SHA=$(sha256sum "$SOURCE_FILE" | awk '{print $1}')
 
 # CSV header
-HEADER="Timestamp,Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,SHA,File Size (bytes),Stripped Size (bytes),Time (ms),RAM Usage (KB),Cycles,Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio"
+HEADER="Timestamp,Compiler,Version,Optimization,Architecture,Additional Flags,CPU Model,Virtualization,Virtualization Type,SHA,File Size (bytes),Stripped Size (bytes),Stdlib,Time (ms),RAM Usage (KB),Cycles,Cache References,Cache Misses,Cache Miss Ratio,Instructions,Instructions Per Cycle,Branches,Branch Misses,Branch Miss Ratio"
 
 # Check if the header exists and matches
 if [ -f "$OUTPUT_FILE" ]; then
@@ -59,40 +60,62 @@ extract_perf_metrics() {
   echo "$cycles,$cache_references,$cache_misses,$cache_miss_ratio,$instructions,$instructions_per_cycle,$branches,$branch_misses,$branch_miss_ratio"
 }
 
+# Function to run tests and log results
+run_tests() {
+  local compiler=$1
+  local compiler_version=$2
+  local opt=$3
+  local arch=$4
+  local stdlib=$5
+
+  echo "Compiling with $compiler $opt $arch $stdlib $ADDITIONAL_FLAGS..."
+  output_executable="a.out"
+  if [[ "$compiler" == "clang++" ]]; then
+    $compiler $opt $arch $stdlib $ADDITIONAL_FLAGS $SOURCE_FILE -o $output_executable
+  else
+    $compiler $opt $arch $ADDITIONAL_FLAGS $SOURCE_FILE -o $output_executable
+  fi
+
+  if [ $? -ne 0 ]; then
+    echo "Compilation failed for $compiler $opt $arch $stdlib $ADDITIONAL_FLAGS"
+    return
+  fi
+
+  file_size=$(stat -c%s "$output_executable")
+  strip "$output_executable"
+  stripped_size=$(stat -c%s "$output_executable")
+
+  for i in $(seq 1 $NUM_RUNS); do
+    echo "Running execution $i..."
+    start_time=$(date +%s%N)
+    /usr/bin/time -v ./a.out 2> time_output.txt
+    end_time=$(date +%s%N)
+
+    execution_time=$((($end_time - $start_time) / 1000000))  # in milliseconds
+    ram_usage=$(grep "Maximum resident set size" time_output.txt | awk '{print $6}')
+
+    perf_output=$(perf stat -e cycles,cache-references,cache-misses,instructions,branches,branch-misses ./$output_executable 2> perf_output.txt)
+    cat perf_output.txt  # Debugging output
+    metrics=$(extract_perf_metrics "$(cat perf_output.txt)")
+
+    timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    echo "$timestamp,$compiler,$compiler_version,$opt,$arch,\"$ADDITIONAL_FLAGS\",\"$CPU_MODEL\",\"$VIRTUALIZATION\",\"$VIRT_TYPE\",\"$SHA\",$file_size,$stripped_size,$stdlib,$execution_time,$ram_usage,$metrics" >> "$OUTPUT_FILE"
+  done
+}
+
 # Main loop
 for compiler in "${COMPILERS[@]}"; do
   compiler_version=$($compiler --version | head -n 1)
   for opt in "${OPT_FLAGS[@]}"; do
     for arch in "${ARCH_FLAGS[@]}"; do
-      echo "Compiling with $compiler $opt $arch $ADDITIONAL_FLAGS..."
-      output_executable="a.out"
-      $compiler $opt $arch $ADDITIONAL_FLAGS $SOURCE_FILE -o $output_executable
-
-      if [ $? -ne 0 ]; then
-        echo "Compilation failed for $compiler $opt $arch $ADDITIONAL_FLAGS"
-        continue
+      if [[ "$compiler" == "clang++" ]]; then
+        for stdlib in "${CLANG_STDLIBS[@]}"; do
+          run_tests "$compiler" "$compiler_version" "$opt" "$arch" "$stdlib"
+        done
+      else
+        stdlib="libstdc++"
+        run_tests "$compiler" "$compiler_version" "$opt" "$arch" "$stdlib"
       fi
-
-      file_size=$(stat -c%s "$output_executable")
-      strip "$output_executable"
-      stripped_size=$(stat -c%s "$output_executable")
-
-      for i in $(seq 1 $NUM_RUNS); do
-        echo "Running execution $i..."
-        start_time=$(date +%s%N)
-        /usr/bin/time -v ./a.out 2> time_output.txt
-        end_time=$(date +%s%N)
-
-        execution_time=$((($end_time - $start_time) / 1000000))  # in milliseconds
-        ram_usage=$(grep "Maximum resident set size" time_output.txt | awk '{print $6}')
-
-        perf_output=$(perf stat -e cycles,cache-references,cache-misses,instructions,branches,branch-misses ./$output_executable 2> perf_output.txt)
-        cat perf_output.txt  # Debugging output
-        metrics=$(extract_perf_metrics "$(cat perf_output.txt)")
-
-        timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-        echo "$timestamp,$compiler,$compiler_version,$opt,$arch,\"$ADDITIONAL_FLAGS\",\"$CPU_MODEL\",\"$VIRTUALIZATION\",\"$VIRT_TYPE\",\"$SHA\",$file_size,$stripped_size,$execution_time,$ram_usage,$metrics" >> "$OUTPUT_FILE"
-      done
     done
   done
 done
