@@ -70,7 +70,7 @@ run_tests() {
 
   echo "Compiling with $compiler $opt $arch $stdlib $ADDITIONAL_FLAGS..."
   output_executable="a.out"
-  if [[ "$compiler" == "clang++" ]]; then
+  if [[ "$compiler" == *"clang++" ]]; then
     $compiler $opt $arch $stdlib $ADDITIONAL_FLAGS $SOURCE_FILE -o $output_executable
   else
     $compiler $opt $arch $ADDITIONAL_FLAGS $SOURCE_FILE -o $output_executable
@@ -108,7 +108,7 @@ for compiler in "${COMPILERS[@]}"; do
   compiler_version=$($compiler --version | head -n 1)
   for opt in "${OPT_FLAGS[@]}"; do
     for arch in "${ARCH_FLAGS[@]}"; do
-      if [[ "$compiler" == "clang++" ]]; then
+      if [[ "$compiler" == *"clang++" ]]; then
         for stdlib in "${CLANG_STDLIBS[@]}"; do
           run_tests "$compiler" "$compiler_version" "$opt" "$arch" "$stdlib"
         done
