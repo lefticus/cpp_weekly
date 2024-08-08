@@ -99,8 +99,8 @@ template <std::size_t value> using min_int_t = decltype(min_int<value>());
 template <std::size_t Width, std::size_t Height> struct GameBoard {
   // These are the properly sized things necessary to hold coordinates
   // that work with this particular size of board
-  using x_index_t = min_int_t<Width>;
-  using y_index_t = min_int_t<Height>;
+  using x_index_t = std::int64_t;
+  using y_index_t = std::int64_t;
 
   static constexpr std::size_t width = Width;
   static constexpr std::size_t height = Height;
