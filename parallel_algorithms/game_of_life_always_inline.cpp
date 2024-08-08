@@ -233,9 +233,11 @@ bool run_board() {
 }
 
 int main() {
-
-  const auto result = run_board<1000, 1000, 500>();
-  if (result) {
-    puts("yup");
-  }
+  if (run_board<10, 10, 5'000'000>()) { puts("yup1"); }
+  if (run_board<100, 10, 500'000>()) { puts("yup2"); }
+  if (run_board<100, 100, 50'000>()) { puts("yup3"); }
+  if (run_board<100, 1000, 5'000>()) { puts("yup4"); }
+  if (run_board<1000, 1000, 500>()) { puts("yup5"); }
+  if (run_board<10000, 1000, 50>()) { puts("yup6"); }
+  if (run_board<10000, 10000, 5>()) { puts("yup7"); }
 }
